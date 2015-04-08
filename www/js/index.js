@@ -16,6 +16,23 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
+g_CONVURI="http://smellof.tk/urlvextract/"
+
+function customLog(f) {
+		$(".app").html($(".app").html()+f+"</br>");
+	
+}
+
+function urlify(text) {
+    var urlRegex = /(https?:\/\/[^\s]+)/g;
+    m=text.match(urlRegex);
+	if (m.length>0)
+		return m[0];
+	else
+		return false;
+}
+
 var app = {
     // Application Constructor
     initialize: function() {
@@ -33,24 +50,61 @@ var app = {
     // The scope of 'this' is the event. In order to call the 'receivedEvent'
     // function, we must explicitly call 'app.receivedEvent(...);'
     onDeviceReady: function() {
-        
-      window.webintent.getUri(function(uri) {
-	
-	alert(uri);
-	
-	});
-      
+       
+		window.plugins.webintent.getExtra(window.plugins.webintent.EXTRA_TEXT,
+			function(uri) {
+				customLog("Received MSG:"+uri);
+				url=urlify(uri)
+				customLog("Received URL:"+url);
+				customLog("Calling service...");
+				$.ajax({
+                        type: "POST",
+                        url: g_CONVURI,
+                        data: "ourl=" + url,
+                        success: function(responsedata) {
+                            customLog("Response received ");
+                            console.log(responsedata);
+                            if (responsedata.url != false) {
+								customLog("Conv. URL:"+responsedata.url);
+								console.log(responsedata.url);
+								window.plugins.webintent.startActivity({
+									action: window.plugins.webintent.ACTION_VIEW,
+									url: responsedata.url,
+									type: 'video/mp4'
+									},
+									function() {
+										customLog("Activity started");
+										navigator.app.exitApp();
+									},
+									function() {
+										customLog("Activity NOT started");;
+										console.log("Failed to open URL via Android Intent. URL: " + responsedata.url)
+									}
+								);
+                            } else {
+								customLog("NO URL received");
+							}
+                        },
+                        error: function(e) {
+                            console.log(e);
+                            
+                        },
+                        dataType: "json"
+					});
+
+				
+				//  the magic here
+				
+			}, function() {
+			// There was no extra supplied.
+			}
+		);
+			
+		app.receivedEvent('deviceready');
     },
     // Update DOM on a Received Event
     receivedEvent: function(id) {
-        var parentElement = document.getElementById(id);
-        var listeningElement = parentElement.querySelector('.listening');
-        var receivedElement = parentElement.querySelector('.received');
-
-        listeningElement.setAttribute('style', 'display:none;');
-        receivedElement.setAttribute('style', 'display:block;');
-
-        console.log('Received Event: ' + id);
+  
     }
 };
 
